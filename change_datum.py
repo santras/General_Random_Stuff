@@ -12,8 +12,8 @@ from scipy import stats
 
 headerfilename=('header.txt')                               # Header titles as a txt file, should be in the working directory
 station_country_list=('cmems_countries.txt')                # Stations by countries txt file, should be in the data directory
-path ="..\Data_new\CMEMS_hourly\CMEMS_hourly_fast_check_nop"       #\CMEMS_hourly_fast_check \\"    # Path for the original data file folder, best not to have anything else
-output_path = "..\..\CMEMS_hourly_EVRF07\Fast_check_nop\\"              # than the .txt data file in this directory
+path ="..\Data\Finland_Final"       #\CMEMS_hourly_fast_check \\"    # Path for the original data file folder, best not to have anything else
+output_path = "..\..\CMEMS_hourly_EVRF07\F_not_check\\"              # than the .txt data file in this directory
 datum_new="EVRF2007"                                                 # The new datum
 
 # Change in cm according to evrs.bkg.bund.de
@@ -309,8 +309,10 @@ def check_country(filename):
         if filename==splitline[0]:
             country=splitline[1]
             found=True
-    if not found==True:
-        exit("Couldn't match ",filename," to a country.")
+
+    if not found:
+        country="not_found"
+
     return country
 
 ####################################################################################################
@@ -326,8 +328,8 @@ def main():
     for file in glob.glob("*.txt"):                 # Opens all that ends with .txt in the path folder one by one
         if not file==station_country_list:
             (sl_variables,Header_dict,station,okey,datum)=open_glfiles(file,Header_dict)        # Function 3
-            country =check_country(file)                                                  # Function 8
-                                                                                # list has stations by the filename
+            country=check_country(file)                                                  # Function 8
+                                                                                   # list has stations by the filename
 
             if not okey:
                 print("Something went wrong opening Cmems file",file,"exiting program.")
