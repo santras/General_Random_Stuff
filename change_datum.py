@@ -5,31 +5,37 @@ import numpy as np
 import os, glob
 from scipy import stats
 
-# Progress:
-# This code hasen't even been started it seems
 
 
 # The purpose of this code is to take files in gl -format and change the height refrence frame to EVRF07
 
 
-headerfilename=('header.txt')           # Header titles as a txt file, should be in the working directory
-path = "..\Data\Time_range\Timerange_2006_2007_nonchecked"  # \MEMS_GL"        # Path for the original data file folder, best not to have anything else
-output_path = "..\EVRF07_2006_2007_unchecked\\"                                       # than the .txt data file in this directory
-set_country=""                                                    # Set only if you run for 1 country at the time, since it effects the results
-datum="EVRF2007"
-station_country_list=("cmems_countries.txt")                       # This is a list of filenames of stations and the country they are in, needed unless set_country is set
-time_period_start=datetime.datetime(2006,1,1,0,0)                   # From when to where this data is, this only affects the name of the outputfile, the header is taken from values
-time_period_end=datetime.datetime(2007,12,31,23,0)
+headerfilename=('header.txt')                               # Header titles as a txt file, should be in the working directory
+station_country_list=('cmems_countries.txt')                # Stations by countries txt file, should be in the data directory
+path ="..\Data_new\CMEMS_hourly\CMEMS_hourly_fast_check_nop"       #\CMEMS_hourly_fast_check \\"    # Path for the original data file folder, best not to have anything else
+output_path = "..\..\CMEMS_hourly_EVRF07\Fast_check_nop\\"              # than the .txt data file in this directory
+datum_new="EVRF2007"                                                 # The new datum
 
-Estonia=19  # Change in cm according to evrs.bkg.bund.de
+# Change in cm according to evrs.bkg.bund.de
+#BHS77 /Kronstadt datum
+Estonia=19
 Latvia=15
 Lithuania=12
 Poland=17
-Germany=1
-Denmark=0
-Sweden=-1
-Finland=-1
-Russia = 25  # Lähde Jaakko Mäkinen, tämä pitää tarkistaa Ekman 1999 Marine Geodecy
+Russia = 25     # Lähde Jaakko Mäkinen, tämä pitää tarkistaa Ekman 1999 Marine Geodecy
+
+
+# Amsterdam (NAP) Datum
+Datum_dict={}
+Datum_dict["DHHN92"] = 1
+Datum_dict["DVR90"] = 0
+Datum_dict["RH2000"] = -1
+Datum_dict["NN2000"] = -1
+
+# Kronstadt datum
+Datum_dict["SNN76"] = 16
+# Germany old system was 15 cm lower  than new new system and then +1 change to EVRF07
+# https://www.bkg.bund.de/DE/Ueber-das-BKG/Geodaesie/Integrierter-Raumbezug/Hoehe-Deutschland/hoehe-deutsch.html
 
 # Function 1
 def open_rfile(file_name):
@@ -104,8 +110,15 @@ def open_glfiles(file,header):
             elif splitline[0]=="Source":
                 if len(splitline)==1:
                     source=""
+                    print("Source missing in ",file)
                 else:
                     source=splitline[1].strip()
+            elif splitline[0]=="Datum":
+                if len(splitline)==1:
+                    datum=""
+                    print("Datum missing in ",file)
+                else:
+                    datum=splitline[1].strip()
             elif splitline[0]=="Missing":
                 missing=splitline[2].strip()
             elif splitline[0]=="Start":
@@ -142,7 +155,7 @@ def open_glfiles(file,header):
 
     #print(variables[0:10])
 
-    return variables, header,station, okey
+    return variables, header,station, okey,datum
 
 # Function 4
 def update_header(Headers, stationname, latitude, longitude,source,missing,starttime,endtime,total):
@@ -151,7 +164,7 @@ def update_header(Headers, stationname, latitude, longitude,source,missing,start
     # like in tgtools
     # later, start, end, total, missing
     Headers["Source"] = source
-    Headers["Datum"] = datum
+    Headers["Datum"] = datum_new
     Headers["Station"] = stationname
     Headers["Longitude"] = longitude
     Headers["Latitude"] = latitude
@@ -165,45 +178,45 @@ def update_header(Headers, stationname, latitude, longitude,source,missing,start
     return Headers
 
 # Function 5
-def process_file(filename,sl_variables,Headers,order,station,country):
+def process_file(filename,sl_variables,Headers,order,station,country,datum):
     # Called by: Main, Calls: check_data/Function5, fill_headers/Function8, write_output/Function9
     # Makes an output folder if it doesen't exist and creates needed variables for header, then it updates and orders
     # the header and finally writes the output of spesified time period.
 
     # HERE OUTPUTFILENAME
 
-    output_file=output_path+station.replace(" ","")+"_"+time_period_start.strftime("%Y-%m-%d")+"_"+time_period_end.strftime("%Y-%m-%d")+".txt"
+    output_file=output_path+station.replace(" ","")+"_EVRF2007.txt"
 
     if not os.path.exists(output_path):                             # Making the output folder if needed
         os.makedirs(output_path, exist_ok=True)
 
-    sl_variables = change_to_evrf(sl_variables,country)             # Funtion 6
+    sl_variables = change_to_evrf(sl_variables,country,datum)               # Funtion 6
 
-    write_output(Headers,sl_variables,order,output_file)                             # Function 7
+    write_output(Headers,sl_variables,order,output_file)                     # Function 7
 
 
 # Function 6
-def change_to_evrf(sl_variables,country):
-    if country == "Estonia":
-        to_add=Estonia
-    elif country == "Latvia":
-        to_add=Latvia
-    elif country == "Lithuania":
-        to_add=Lithuania
-    elif country == "Russia":
-        to_add = Russia
-    elif country == "Poland":
-        to_add = Poland
-    elif country == "Germany":
-        to_add = Germany
-    elif country == "Denmark":
-        to_add = Denmark
-    elif country == "Sweden":
-        to_add = Sweden
-    elif country == "Finland":
-        to_add=Finland
+def change_to_evrf(sl_variables,country,datum):
+    if datum=="BHS77":
+        if country == "Estonia":
+            to_add = Estonia
+        elif country == "Latvia":
+            to_add = Latvia
+        elif country == "Lithuania":
+            to_add = Lithuania
+        elif country == "Russia":
+            to_add = Russia
+        elif country == "Poland":
+            to_add = Poland
+        else:
+            print("Can't find country: ",country)
+            return []
     else:
-        print("Can't find country: ",country)
+        try:
+            to_add = Datum_dict[datum]
+        except:
+            print("Can't find datum: ",datum)
+            return []
 
     new_variable=[]
     for ind in range(len(sl_variables)):
@@ -286,9 +299,6 @@ def write_output(HeaderDict, sl_variables, order, outputfile):
 def check_country(filename):
     # Called by: Main, Calls: open_rfile()/ Function 1
     # Checks the country from the list if not given
-    if not set_country=="":
-        print("Defaulting to define country as: ",set_country)
-        return  set_country
     (data,okey)=open_rfile(station_country_list)
     if not okey:
         print("Couldn't open file:",station_country_list)
@@ -313,15 +323,16 @@ def main():
     (Header_dict,header_order)=get_headers()        # Function 2, gettin header model
 
     os.chdir(path)
-    for file in glob.glob("*.txt"):                 # Opens all that ends with .csv in the path folder one by one
+    for file in glob.glob("*.txt"):                 # Opens all that ends with .txt in the path folder one by one
         if not file==station_country_list:
-            (sl_variables,Header_dict,station,okey)=open_glfiles(file,Header_dict)        # Function 3
-            country =check_country(file)                                                   # list has stations by the filename
+            (sl_variables,Header_dict,station,okey,datum)=open_glfiles(file,Header_dict)        # Function 3
+            country =check_country(file)                                                  # Function 8
+                                                                                # list has stations by the filename
 
             if not okey:
                 print("Something went wrong opening Cmems file",file,"exiting program.")
                 exit()
-            process_file(file,sl_variables,Header_dict,header_order,station,country) # Function 5
+            process_file(file,sl_variables,Header_dict,header_order,station,country,datum) # Function 5
 
 
 
