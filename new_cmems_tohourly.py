@@ -15,12 +15,12 @@ from scipy import stats
 
 
 headerfilename=('header.txt')                       # Header titles as a txt file, should be in the working directory
-path="..\Data\MEMS_GL\\"                            # Path for the original data file folder, best not to have anything else
-output_path= "..\..\Data_new\CMEMS_hourly\CMEMS_hourly_fast_check_nop\\"        # than the .txt data file in this directory
+path="..\Data_new\Other\Solution\\"                            # Path for the original data file folder, best not to have anything else
+output_path= "..\..\CMEMS_hourly_EVRF07\Add_FastCheck\\"        # than the .txt data file in this directory
 time_difference=60                                  # Time difference in minutes between measurements
 max_sealevel_difference=50                          # Sea level change in 1 hour that is considered too suspicious, in cm
 check_files=True                          # Normally True, only false if you don't want the check to be made (check= remove suspicious)
-patching_missing=False                     # Normally True, only false if you don't want to add missing measurements as nan-values
+patching_missing=True                    # Normally True, only false if you don't want to add missing measurements as nan-values
 
 
 
@@ -150,7 +150,8 @@ def process_file(filename,sl_variables,Headers,order,station):
     # Makes an output folder if it doesen't exist and then calls in functions to check that data is in order
     # and creates needed variables for header, then it updates and orders the header and finally writes the output.
 
-    output_file=output_path+"Gl_"+station.replace(" ", "")+".txt"                   # HERE OUTPUTFILENAME
+    #output_file=output_path+"Gl_"+station.replace(" ", "")+".txt"                   # HERE OUTPUTFILENAME
+    output_file = output_path + "Gl_" + filename[:-4] + ".txt"
 
     if not os.path.exists(output_path):                             # Making the output folder if it doesen't allready exist
         os.makedirs(output_path, exist_ok=True)
@@ -188,12 +189,14 @@ def check_data(name,sl_variables):
 
     # If file is empty
     if len(var_onlyhour)==0:
+        #print("check1")
         return [], 0, 0, [], []
 
     # Ordering the new set of measurements
     # Stops checking if check_files is False and returns without padding and without further checks
     var_onlyhour = sorted(var_onlyhour)
     if check_files==False:
+        #print("check2")
         return var_onlyhour, missing, len(var_onlyhour), var_onlyhour[0][0], var_onlyhour[-1][0]
 
 
@@ -219,6 +222,7 @@ def check_data(name,sl_variables):
 
     # Ends if don't want to add "missing lines"
     if patching_missing==False:
+        #print("check3")
         return var_onlyhour, missing, len(var_onlyhour), var_onlyhour[0][0], var_onlyhour[-1][0]
 
     # Checking the order of the new set of measurements, gives false if time interval something else than
@@ -228,9 +232,11 @@ def check_data(name,sl_variables):
         transposed.append([row[i] for row in var_onlyhour])
     (inorder, inds) = check_listorder(transposed[0],time_difference * 60)  # Function 7, checking if entries with 60 min time interval
 
+
     if not inorder:
         print("File " + name + " is not in order with the given time interval between measurements, probably missing entries."
                 " Trying to solve the problem.")
+
         new_variables=[]
         # Missing times are patched with nan and flag=9
         # Passing the first item directly
@@ -249,9 +255,10 @@ def check_data(name,sl_variables):
         (inorder, inds) = check_listorder(transposed[0],time_difference * 60)  # Function 7, checking if entries with 60 min time interval
         if not inorder:
             print("Warning, something went wrong in ordering the file")
-
+        #print("check4")
         return new_variables, missing, len(new_variables), new_variables[0][0], new_variables[-1][0]
 
+    return var_onlyhour, missing, len(var_onlyhour), var_onlyhour[0][0], var_onlyhour[-1][0]
 
 # Function 7
 def check_listorder(dates,diff,current_ind=1):
